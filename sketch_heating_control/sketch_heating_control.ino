@@ -8,8 +8,25 @@
  * 
  */
  
+ // OneWire DS18B20 Temperature
+//
+// http://www.pjrc.com/teensy/td_libs_OneWire.html
+//
+// The DallasTemperature library can do all this work for you!
+// http://milesburton.com/Dallas_Temperature_Control_Library
+ 
+ 
 #include <EEPROMex.h>
+#include <OneWire.h>
 
+// ################# begin vars DS18B20 Temperature Sensor #############
+OneWire  ds(10);  // on pin 10 (a 4.7K resistor is necessary)
+
+float celsius;    // temperature of Sensor
+
+// ################# end DS18B20 Temperature Sensor ####################
+
+// ################ begin vars S0 Interface#############################
 // these values are saved in EEPROM
 const byte EEPROM_ID = 0x99;                       // used to identify if valid data in EEPROM
 volatile double impulse = 0.000;                   // store impulse
@@ -26,6 +43,7 @@ const int SZeroPin = 2;                            // initializing S0 Pin
 
 // stores first byte of EEPROM.read(ID_ADDR)
 byte id;
+//################ end S0 Interface ####################################
 
 void setup() {
   Serial.begin(9600);
@@ -44,28 +62,100 @@ void setup() {
     
     readImpulseFromEEPROM();
     delay(500);
-    Serial.print("Output of EEPROM if EEPROM_ID is set = " );
+/*    Serial.print("Output of EEPROM if EEPROM_ID is set = " );
     printDouble(outputOfEEPROM, 1000);
     Serial.println("");
-   
+*/   
   }else {
   // here if the ID is not found, so write the default data
     
-    Serial.print("ID is not found , setting ID!");
+//    Serial.print("ID is not found , setting ID!");
     EEPROM.write(ID_ADDR, EEPROM_ID);
     delay(200);
     readImpulseFromEEPROM();
     delay(200);
     
     // is for debugging purpose at Serial Monitor
-    debugTraceElse();
+    // debugTraceElse();
     
   }
 }
 
 void loop() {
-  // is for debugging purpose at Serial Monitor
-  debugTrace();
+  // is for debugging purpose of S0 interface at Serial Monitor
+  delay(1000);
+   debugTrace();
+
+  // Read temperature Sensor
+   readTemperature();
+
+}
+
+void readTemperature() {
+  
+byte i;
+byte present = 0;
+byte type_s = 0;
+byte data[12];
+byte addr[8];
+float celsius;
+
+  if ( !ds.search(addr)) {
+//    Serial.println("No more addresses.");
+//    Serial.println();
+    ds.reset_search();
+    delay(250);
+    return;
+  }
+  
+  ds.reset();
+  ds.select(addr);
+  ds.write(0x44, 1);        // start conversion, with parasite power on at the end
+  
+  delay(1000);     // maybe 750ms is enough, maybe not
+  // we might do a ds.depower() here, but the reset will take care of it.
+  
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(0xBE);         // Read Scratchpad
+
+// Serial.print("  Data = ");
+//  Serial.print(present, HEX);
+//  Serial.print(" ");
+  for ( i = 0; i < 9; i++) {           // we need 9 bytes
+    data[i] = ds.read();
+//    Serial.print(data[i], HEX);
+//    Serial.print(" ");
+  }
+  
+/*  Serial.print(" CRC=");
+  Serial.print(OneWire::crc8(data, 8), HEX);
+  Serial.println();
+*/ 
+    // Convert the data to actual temperature
+  // because the result is a 16 bit signed integer, it should
+  // be stored to an "int16_t" type, which is always 16 bits
+  // even when compiled on a 32 bit processor.
+  int16_t raw = (data[1] << 8) | data[0];
+  if (type_s) {
+    raw = raw << 3; // 9 bit resolution default
+    if (data[7] == 0x10) {
+      // "count remain" gives full 12 bit resolution
+      raw = (raw & 0xFFF0) + 12 - data[6];
+    }
+  } else {
+    byte cfg = (data[4] & 0x60);
+    // at lower res, the low bits are undefined, so let's zero them
+    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+    //// default is 12 bit resolution, 750 ms conversion time
+  }
+  celsius = (float)raw / 16.0;
+  Serial.print("Temperature = ");
+  Serial.print(celsius);
+  Serial.println(" Celsius");
+ 
 }
 
 void readImpulseFromEEPROM(){              // Read impulse from EEPROM
@@ -106,15 +196,16 @@ void printDouble( double val, unsigned int precision){
 
 void debugTrace(){
     // +++ the following block is for debugging purpose
+   delay(500);
    if(digitalRead(SZeroPin)  == 1){
     /* 
     int dR = digitalRead(SZeroPin);
     Serial.print("dR = " );
     Serial.print(dR);
     */
-    Serial.print("EEPROMv= " );
     readImpulseFromEEPROM();
-    delay(1500);
+    delay(50);
+    Serial.print("EEPROMv= " );
     printDouble(outputOfEEPROM, 1000);
     Serial.print("");
     Serial.println("##################");

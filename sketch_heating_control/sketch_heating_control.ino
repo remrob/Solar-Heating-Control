@@ -8,7 +8,7 @@
  * 
  */
  
- // OneWire DS18B20 Temperature
+// OneWire DS18B20 Temperature
 //
 // http://www.pjrc.com/teensy/td_libs_OneWire.html
 //
@@ -18,8 +18,16 @@
  
 #include <EEPROMex.h>
 #include <OneWire.h>
+#include <Bridge.h>
+
+// ################# begin bridge ######################################
+
+char switchValue[2];        // digital pin 12 for switching relay
+
+// ################# end bridge ########################################
 
 // ################# begin vars DS18B20 Temperature Sensor #############
+
 OneWire  ds(10);  // on pin 10 (a 4.7K resistor is necessary)
 
 float celsius;    // temperature of Sensor
@@ -27,6 +35,7 @@ float celsius;    // temperature of Sensor
 // ################# end DS18B20 Temperature Sensor ####################
 
 // ################ begin vars S0 Interface#############################
+
 // these values are saved in EEPROM
 const byte EEPROM_ID = 0x99;                       // used to identify if valid data in EEPROM
 volatile double impulse = 0.000;                   // store impulse
@@ -39,37 +48,57 @@ const int addressOnEEPROM = 7;                     // the EEPROM address used to
 double outputOfEEPROM;
 
 // Interrupt at SZero(S0) Pin
-const int SZeroPin = 2;                            // initializing S0 Pin
+const int SZeroPin = 2;                           // initializing S0 Pin
 
 // stores first byte of EEPROM.read(ID_ADDR)
 byte id;
+
 //################ end S0 Interface ####################################
 
 void setup() {
+  // needed only for debugging purpose at Serial Monitor
   Serial.begin(9600);
   
-  pinMode(SZeroPin, INPUT);                              // defining SZeroPin as INPUT/OUTPUT
+  // ################# setup S0 Interface ################################
   
-  attachInterrupt(1, saveImpulseToEEPROM, FALLING);      // Interrupt settings for Arduino-Yun
+  pinMode(SZeroPin, INPUT);                            // defining SZeroPin as INPUT/OUTPUT
   
-  id = EEPROM.read(ID_ADDR);                             // read the first byte from the EEPROM
+  attachInterrupt(1, saveImpulseToEEPROM, FALLING);   // Interrupt settings for Arduino-Yun
+  
+  // ################# end setup S0 Interface ################################
+  
+  // ################# setup bridge ##########################################
+  
+  pinMode(12,OUTPUT);          // defining pin 12 as OUTPUT for bridge communication
+  
+  // this is for debugging purpose
+  // pinMode(13,OUTPUT);
+  
+  Bridge.begin();             // Starts Bridge, facilitating communication between the AVR and Linux processor
+                              // begin() is a blocking function, this process takes approximately three seconds.
+  // ################# end setup bridge ######################################
+  
+  // ####  initializing S0 interface and set EEPROM_ID #######################
+  
+  id = EEPROM.read(ID_ADDR);                     // read the first byte from the EEPROM
   
   // delay is for debugging purpose at Serial Monitor
-  delay(5000);
+  //delay(5000);
   
   if(id == EEPROM_ID){
     // here if the id value of EEPROM.read matches the value saved when writing EEPROM
     
     readImpulseFromEEPROM();
     delay(500);
-/*    Serial.print("Output of EEPROM if EEPROM_ID is set = " );
+/*    
+    Serial.print("Output of EEPROM if EEPROM_ID is set = " );
     printDouble(outputOfEEPROM, 1000);
     Serial.println("");
 */   
   }else {
   // here if the ID is not found, so write the default data
     
-//    Serial.print("ID is not found , setting ID!");
+  // Serial.print("ID is not found , setting ID!");
     EEPROM.write(ID_ADDR, EEPROM_ID);
     delay(200);
     readImpulseFromEEPROM();
@@ -79,12 +108,27 @@ void setup() {
     // debugTraceElse();
     
   }
+  // ####  end initializing S0 interface #########################################
 }
 
+
 void loop() {
+  
+  // ######### begin bridge ##########
+  
+  Bridge.get("switch1",switchValue,2);
+  int D12int = atoi(switchValue);
+  digitalWrite(12,D12int);
+  
+  // this is for debugging purpose
+  // digitalWrite(13,D12int);
+  Bridge.put("value", "42");
+  
+  // ######### end bridge ##########
+  
   // is for debugging purpose of S0 interface at Serial Monitor
-  delay(1000);
-   debugTrace();
+  //delay(1000);
+  debugTrace();
 
   // Read temperature Sensor
    readTemperature();

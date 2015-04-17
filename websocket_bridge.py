@@ -5,6 +5,7 @@ from websocket import websocket
 import sys
 from pprint import pprint
 import json
+from threading import Timer
 
 
 ###### begin Bridge ############
@@ -13,12 +14,17 @@ sys.path.insert(0, '/usr/lib/python2.7/bridge/')
 
 from bridgeclient import BridgeClient as bridgeclient
 
-value = bridgeclient()
+bridgeCli = bridgeclient()
 
-####### initial switch state is off
-value.put('switch1','0')
+### initial switch state is off
+bridgeCli.put('switch1','0')
 
-        print value.get('value')
+### timer for looping Bridge output
+def loopBridge():
+        print "Celsius Outdoor"
+        print bridgeCli.get('celsiusOutdoor')
+        Timer(5.0, loopBridge).start()
+Timer(5.0, loopBridge).start()
 
 ##### end Bridge ##################
 
@@ -92,3 +98,4 @@ ws.on_open = on_open
 ws.run_forever()
 
 ##### end websocket #############
+

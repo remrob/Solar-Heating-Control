@@ -117,12 +117,15 @@ void loop() {
   // ######### begin bridge ##########
   
   Bridge.get("switch1",switchValue,2);
-  int D12int = atoi(switchValue);
+  int D12int = atoi(switchValue);   // atoi = Alpha to integer
   digitalWrite(12,D12int);
   
   // this is for debugging purpose
   // digitalWrite(13,D12int);
-  Bridge.put("value", "42");
+  // Serial.print("String(celsius) = ");
+  // Serial.print(String(celsius));
+  
+  Bridge.put("celsiusOutdoor", String(celsius));  // Send Outdoor Temperature 
   
   // ######### end bridge ##########
   
@@ -142,7 +145,6 @@ byte present = 0;
 byte type_s = 0;
 byte data[12];
 byte addr[8];
-float celsius;
 
   if ( !ds.search(addr)) {
 //    Serial.println("No more addresses.");

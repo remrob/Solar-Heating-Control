@@ -10,9 +10,11 @@ from threading import Timer
 
 ###### begin Bridge ############
 
-sys.path.insert(0, '/usr/lib/python2.7/bridge/')
 
+sys.path.insert(0, '/usr/lib/python2.7/bridge/')
 from bridgeclient import BridgeClient as bridgeclient
+
+previousTemperature = 0
 
 bridgeCli = bridgeclient()
 
@@ -21,17 +23,19 @@ bridgeCli.put('switch1','0')
 
 ### timer for looping Bridge output
 def loopBridge():
-        print "Celsius Outdoor"
-        print bridgeCli.get('celsiusOutdoor')
+        global previousTemperature
+        currentTemperature = bridgeCli.get('celsiusOutdoor')
+        print("Temperature :")
+        print(currentTemperature)
+        if abs(int(previousTemperature) - int(currentTemperature)) > 1: # absolute d$
+                previousTemperature = currentTemperature
+                ws.send('{"key":"key1","value":'+str(previousTemperature)+'}')
         Timer(5.0, loopBridge).start()
-Timer(5.0, loopBridge).start()
 
 ##### end Bridge ##################
 
 #### begin ws debugTrace ################
 print sys.argv
-
-print "or  with for-loop:"
 
 for i in range(len(sys.argv)):
     if i == 0:
@@ -44,8 +48,8 @@ for i in range(len(sys.argv)):
 ##### begin Websocket #############
 
 def on_message(ws, message):
+        global savedTemperature
         jsonData = json.loads(message)
-        print(message)
         print "unit = %s" % jsonData["unit"]
         print (type(jsonData["task"]))
         print "task = %s" % jsonData["task"]
@@ -70,6 +74,7 @@ def on_close(ws):
         print ("... closed ...")
 
 def on_open(ws):
+        Timer(1.0, loopBridge).start()
         print ("opend")
 #       pprint(vars(ws))
         ### show initial state of switch as Off

@@ -124,8 +124,7 @@ void loop() {
   // digitalWrite(13,D12int);
   // Serial.print("String(celsius) = ");
   // Serial.print(String(celsius));
-  
-  Bridge.put("celsiusOutdoor", String(celsius));  // Send Outdoor Temperature 
+  Bridge.put("celsiusOutdoor", String((int)celsius));  // Send Outdoor Temperature 
   
   // ######### end bridge ##########
   

@@ -53,11 +53,11 @@ def on_message(ws, message):
 ###  REMROB control
         if int(jsonData["unit"]) == 20 and int(jsonData ["task"]) == 30:
           print("switchOn")
-          value.put('switch1','1')
+          bridgeCli.put('switch1','1')
           ws.send('{"unit":20,"state":30}')
         elif int(jsonData ["unit"]) == 20 and int(jsonData ["task"]) == 50:
           print("switchOff")
-          value.put('switch1','0')
+          bridgeCli.put('switch1','0')
           ws.send('{"unit":20,"state":50}')
         else:
           print "error"

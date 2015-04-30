@@ -14,7 +14,15 @@ from threading import Timer
 sys.path.insert(0, '/usr/lib/python2.7/bridge/')
 from bridgeclient import BridgeClient as bridgeclient
 
+# Impulse Powermeter
+previousPowermeterImpulse = 0
+
+# Outdoor temperature
 previousTemperature = 0
+
+# Flow temperature
+previousTemperatureFlow = 0
+
 
 bridgeCli = bridgeclient()
 
@@ -22,15 +30,39 @@ bridgeCli = bridgeclient()
 bridgeCli.put('switch1','0')
 
 ### timer for looping Bridge output
-def loopBridge():
+def loopTemperatureBridge():
         global previousTemperature
         currentTemperature = bridgeCli.get('celsiusOutdoor')
-        print("Temperature :")
+        print("Temperature Outdoor :")
         print(currentTemperature)
         if abs(int(previousTemperature) - int(currentTemperature)) > 1: # absolute d$
                 previousTemperature = currentTemperature
-                ws.send('{"key":"key1","value":'+str(previousTemperature)+'}')
-        Timer(5.0, loopBridge).start()
+                ws.send('{"key":"tempOut","value":'+str(previousTemperature)+'}')
+                ws.send('{"variable":"300","value":'+str(previousTemperature)+'}')
+
+        Timer(5.0, loopTemperatureBridge).start()
+
+def loopTemperatureFlowBridge():
+        global previousTemperatureFlow
+        currentTemperature = bridgeCli.get('celsiusFlow')
+        print("Temperature Flow :")
+        print(currentTemperature)
+        if abs(int(previousTemperatureFlow) - int(currentTemperature)) > 1: # absolu$
+                previousTemperatureFlow = currentTemperature
+                ws.send('{"key":"tempFlow","value":'+str(previousTemperatureFlow)+'}$
+                ws.send('{"variable":"40","value":'+str(previousTemperatureFlow)+'}')
+
+        Timer(5.0, loopTemperatureFlowBridge).start()
+
+def loopImpulseBridge():
+         global previousPowermeterImpulse
+         currentPowermeterImpulse = float(bridgeCli.get('PowerMeterImpulse'))
+         print(currentPowermeterImpulse)
+         kWmin = currentPowermeterImpulse - previousPowermeterImpulse
+         if previousPowermeterImpulse != 0:
+                ws.send('{"variable":"70","value":'+str(kWmin)+'}')
+         previousPowermeterImpulse = currentPowermeterImpulse
+         Timer(60.0, loopImpulseBridge).start()  # have to read every 60 minutes
 
 ##### end Bridge ##################
 
@@ -74,7 +106,9 @@ def on_close(ws):
         print ("... closed ...")
 
 def on_open(ws):
-        Timer(1.0, loopBridge).start()
+        Timer(1.0, loopTemperatureBridge).start()
+        Timer(1.5, loopTemperatureFlowBridge).start()
+        Timer(2.0, loopImpulseBridge).start()
         print ("opend")
 #       pprint(vars(ws))
         ### show initial state of switch as Off
@@ -103,4 +137,3 @@ ws.on_open = on_open
 ws.run_forever()
 
 ##### end websocket #############
-

@@ -30,14 +30,13 @@ sys.path.insert(0, '/usr/lib/python2.7/bridge/')
 from bridgeclient import BridgeClient as bridgeclient
 
 # Impulse Powermeter # Outdoor temperature # Flow temperature
-# are declared and assigned an intitial value at "on_open()" Function
 #previousPowermeterImpulse = 0
 #previousTemperature = 0
 #previousTemperatureFlow = 0
 
 bridgeCli = bridgeclient()
 
-### timers for looping Bridge output ###
+### timers for looping Bridge output
 def loopTemperatureOutdoorBridge():
     global previousTemperature
     if ws.sock:
@@ -46,14 +45,15 @@ def loopTemperatureOutdoorBridge():
         except Exception as e:
             logger.error('Can not read Bridge celsiusOutdoor')
             logger.error(e)
-        logger.info("Temperature Outdoor = "+ str(currentTemperature))
-        if abs(int(previousTemperature) - int(currentTemperature)) > 1: # absolute d$
-            previousTemperature = currentTemperature
-            ws.send('{"key":"tempOut","value":'+str(previousTemperature)+'}')
-            ws.send('{"variable":"300","value":'+str(previousTemperature)+'}')
+        else:
+            logger.info("Temperature Outdoor = "+ str(currentTemperature))
+            if abs(int(previousTemperature) - int(currentTemperature)) > 1: # absolu$
+                previousTemperature = currentTemperature
+                ws.send('{"key":"tempOut","value":'+str(previousTemperature)+'}')
+                ws.send('{"variable":"300","value":'+str(previousTemperature)+'}')
 
     Timer(10.0, loopTemperatureOutdoorBridge).start()
-
+    
 def loopTemperatureFlowBridge():
     global previousTemperatureFlow
     if ws.sock:
@@ -62,13 +62,14 @@ def loopTemperatureFlowBridge():
         except Exception as e:
             logger.error('Can not read Bridge celsiusFlow')
             logger.error(e)
-        logger.info("previousTemperatureFlow: "+str(previousTemperatureFlow)+" Tempe$
-        if abs(int(previousTemperatureFlow) - int(currentTemperature)) > 1: # absolu$
-            previousTemperatureFlow = currentTemperature
-            ws.send('{"key":"tempFlow","value":'+str(previousTemperatureFlow)+'}')
-            ws.send('{"variable":"40","value":'+str(previousTemperatureFlow)+'}')
+        else:
+            logger.info("previousTemperatureFlow: "+str(previousTemperatureFlow)+" T$
+            if abs(int(previousTemperatureFlow) - int(currentTemperature)) > 1: # ab$
+                previousTemperatureFlow = currentTemperature
+                ws.send('{"key":"tempFlow","value":'+str(previousTemperatureFlow)+'}$
+                ws.send('{"variable":"40","value":'+str(previousTemperatureFlow)+'}')
 
-    Timer(10.0, loopTemperatureFlowBridge).start()
+    Timer(27.0, loopTemperatureFlowBridge).start()
 
 
 def loopImpulseBridge():
@@ -79,11 +80,15 @@ def loopImpulseBridge():
         except Exception as e:
             logger.error('Can not read Bridge PowerMeterImpulse')
             logger.error(e)
-        logger.info("Current Powermeter Impulse = " + str(currentPowermeterImpulse))
-        kWmin = currentPowermeterImpulse - previousPowermeterImpulse
-        if previousPowermeterImpulse != 0:
-            ws.send('{"variable":"70","value":'+str(kWmin)+'}')
-        previousPowermeterImpulse = currentPowermeterImpulse
+        else:
+            logger.info("Current Powermeter Impulse = " + str(currentPowermeterImpul$
+            kWmin = currentPowermeterImpulse - previousPowermeterImpulse
+            if previousPowermeterImpulse != 0:
+                try:
+                    ws.send('{"variable":"70","value":'+str(kWmin)+'}')
+                except Exception as e:
+                        logger.error('In loopImpulseBridge() ws.send broken')
+                previousPowermeterImpulse = currentPowermeterImpulse
     Timer(60.0, loopImpulseBridge).start()  # have to read every 60 minutes
 
 ##### begin Websocket #############
@@ -131,10 +136,11 @@ def on_open(ws):
     ### show initial state of switch as Off
     ws.send('{"switch":20,"state":50}')
 
-ws = websocket.WebSocketApp('wss://objects.remrob.com/?model=733&id=70&key=70',on_me$
+ws = websocket.WebSocketApp('wss://objects.remrob.com/v1/?model=733&id=70&key=70',on$
 ws.on_open = on_open
 
 def startSocket():
         ws.run_forever()
 
 startSocket()
+
